@@ -12,18 +12,22 @@ type token struct {
 
 func main() {
 	code := "(add 2 (subtract 4 2))"
+	// code := "( add )"
 	tokens := tokenizer(code) // Parsing
 
-	fmt.Println(tokens)
+	for i, token := range tokens {
+		fmt.Printf("[%d] %q\n", i, token)
+	}
+
 }
 
 func tokenizer(code string) []token {
 	tokens := []token{}
-	current := 0
+	currentIndex := 0
 	pendingParen := 0
 
-	for current < len([]rune(code)) {
-		char := string([]rune(code)[current])
+	for currentIndex < len([]rune(code)) {
+		char := string([]rune(code)[currentIndex])
 
 		if char == "(" {
 			tokens = append(tokens, token{
@@ -41,10 +45,30 @@ func tokenizer(code string) []token {
 			pendingParen--
 		}
 
-		current++
+		isPossibleToHaveAnAdd := currentIndex+3 <= len(code) // if not checking this, go will panic in code[currentIndex:currentIndex+3] because it will be out of bounds
+		if isPossibleToHaveAnAdd && code[currentIndex:currentIndex+3] == "add" {
+			tokens = append(tokens, token{
+				kind:  "name",
+				value: "add",
+			})
+			currentIndex += 3
+			continue
+		}
+
+		isPossibleToHaveASub := currentIndex+8 <= len(code) // if not checking this, go will panic in code[currentIndex:currentIndex+8] because it will be out of bounds
+		if isPossibleToHaveASub && code[currentIndex:currentIndex+8] == "subtract" {
+			tokens = append(tokens, token{
+				kind:  "name",
+				value: "subtract",
+			})
+			currentIndex += 8
+			continue
+		}
+
+		currentIndex++
 	}
 
-	if pendingParen%2 == 0 {
+	if pendingParen%2 != 0 {
 		panic("PARENTHESIS MISSING BRO")
 	}
 
