@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"unicode"
+)
 
 type token struct {
 	kind  string
@@ -11,8 +14,7 @@ type token struct {
 // (add 2 (subtract 4 2))   =>   [{ type: 'paren', value: '(' }, ...]
 
 func main() {
-	code := "(add 2 (subtract 4 2))"
-	// code := "( add )"
+	code := "(add 7 (subtract 32 21))"
 	tokens := tokenizer(code) // Parsing
 
 	for i, token := range tokens {
@@ -35,6 +37,8 @@ func tokenizer(code string) []token {
 				value: char,
 			})
 			pendingParen++
+			currentIndex++
+			continue
 		}
 
 		if char == ")" {
@@ -43,9 +47,21 @@ func tokenizer(code string) []token {
 				value: char,
 			})
 			pendingParen--
+			currentIndex++
+			continue
 		}
 
-		isPossibleToHaveAnAdd := currentIndex+3 <= len(code) // if not checking this, go will panic in code[currentIndex:currentIndex+3] because it will be out of bounds
+		if unicode.IsDigit(rune(char[0])) { //we want to return the numbers of multiple digits as one single token
+			digits := getSequentialDigits(code[currentIndex:])
+			tokens = append(tokens, token{
+				kind:  "number",
+				value: digits,
+			})
+			currentIndex += len(digits)
+			continue
+		}
+
+		isPossibleToHaveAnAdd := currentIndex+3 <= len(code) // if not checking this, golang will panic in code[currentIndex:currentIndex+3] because it will be out of bounds
 		if isPossibleToHaveAnAdd && code[currentIndex:currentIndex+3] == "add" {
 			tokens = append(tokens, token{
 				kind:  "name",
@@ -55,7 +71,7 @@ func tokenizer(code string) []token {
 			continue
 		}
 
-		isPossibleToHaveASub := currentIndex+8 <= len(code) // if not checking this, go will panic in code[currentIndex:currentIndex+8] because it will be out of bounds
+		isPossibleToHaveASub := currentIndex+8 <= len(code) // if not checking this, golang will panic in code[currentIndex:currentIndex+8] because it will be out of bounds
 		if isPossibleToHaveASub && code[currentIndex:currentIndex+8] == "subtract" {
 			tokens = append(tokens, token{
 				kind:  "name",
@@ -64,13 +80,25 @@ func tokenizer(code string) []token {
 			currentIndex += 8
 			continue
 		}
-
-		currentIndex++
+		currentIndex++ // for whitespaces
 	}
 
 	if pendingParen%2 != 0 {
 		panic("PARENTHESIS MISSING BRO")
 	}
-
 	return tokens
+}
+
+func getSequentialDigits(codeSubString string) string {
+	digits := string(codeSubString[0])
+
+	for i := 1; i < len(codeSubString); i++ {
+		if unicode.IsDigit(rune(codeSubString[i])) {
+			digits += string(codeSubString[i])
+		} else {
+			break
+		}
+	}
+
+	return digits
 }
